@@ -25,7 +25,7 @@
 ## 跑起来
 
 ```bash
-git clone <this repo> skill-manager
+git clone https://github.com/sgr997/skill-manager.git
 cd skill-manager
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
