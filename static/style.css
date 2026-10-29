@@ -515,6 +515,8 @@ main { max-width: 1240px; margin: 0 auto; padding: 20px 24px 120px; }
   background: var(--card);
 }
 
+.treebtn, .headtoggle { display: none; }
+
 .view-bar .fname {
   font-family: var(--mono); font-size: 12px; color: var(--ink-2);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -604,7 +606,13 @@ main { max-width: 1240px; margin: 0 auto; padding: 20px 24px 120px; }
   font-size: 14.5px;
   line-height: 1.78;
   color: #27272a;
+  /* 长 URL、长标识符不该把整页撑出横向滚动条 */
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
+
+.md pre, .md table { max-width: 100%; overflow-x: auto; }
+.md img { max-width: 100%; height: auto; }
 
 .md > *:first-child { margin-top: 0; }
 
@@ -828,57 +836,87 @@ body.picking .card .sw { opacity: .25; pointer-events: none; }
   .card-foot { margin-top: 9px; padding-top: 9px; }
 
   .panel { width: 100%; border-left: none; }
-  .panel-head { padding: 17px 18px 14px; }
-  .panel-top h2 { font-size: 18px; }
-  .panel-desc-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 0 0 12px;
-}
+  /* 手机上详情头部占了半屏，文件列表就只剩一小条。
+     这里把描述限 3 行、facts 压成单行横滑、来源框截成两行，给下面的文件与正文腾地方。 */
+  /* 手机上看的是正文，不是 skill 元信息。默认只留标题行 + 一行数字，
+     描述、来源、按钮全收进「详情」，正文区从 500px 涨到 700px 上下。 */
+  .panel-head { padding: 13px 16px 10px; }
+  .panel-top { align-items: center; gap: 10px; }
+  .panel-top h2 { font-size: 17px; }
+  /* 紧跟标题，别用 margin-left:auto —— 关闭按钮也有 auto，两个 auto 会平分
+     剩余空间，把「详情」悬在标题和关闭的正中间。 */
+  .headtoggle {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-left: 9px; padding: 3px 7px 3px 8px; flex: none;
+    border: 1px solid var(--line); border-radius: 6px;
+    background: none; font-size: 11px; color: var(--ink-3);
+    align-self: center;
+  }
+  .headtoggle svg { width: 11px; height: 11px; transition: transform .2s; }
+  .headtoggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .headtoggle[aria-expanded="true"] { color: var(--ink-2); }
+  .panel-desc-row, .src, .panel-actions { display: none; }
+  .panel.expanded .panel-desc-row { display: flex; }
+  .panel.expanded .src { display: block; margin-top: 9px; padding: 8px 11px; font-size: 11.5px; }
+  .panel.expanded .panel-actions { display: flex; margin-top: 11px; }
+  .panel.expanded .panel-actions .btn { padding: 7px 13px; font-size: 12.5px; }
+  .panel.expanded .panel-desc {
+    font-size: 12.5px; margin: 0;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .panel-facts {
+    flex-wrap: wrap; margin-top: 8px; gap: 5px 12px;
+  }
+  .view-bar { padding: 8px 14px; gap: 8px; }
+  .view-bar .fname { font-size: 11.5px; }
 
-.panel-desc-row .trbtn {
-  margin: 1px 0 0;
-  flex: none;
-  height: 22px;
-  min-width: 30px;
-}
-
-.panel-desc { font-size: 13px; }
-  .view-bar { padding: 8px 18px; }
-
-  /* 移动端：文件树变横向滚动条 */
-  .body-split { flex-direction: column; }
+  /* 移动端：文件树收进「文件」按钮，点开是覆盖整个预览区的竖向列表。
+     原来的横向滚动 chips 在文件多的时候要滑半天才找到目标，竖向更好扫。
+     选完文件自动收起，不用再点一次。 */
+  .body-split { flex-direction: column; position: relative; }
+  .treebar { display: flex; align-items: center; gap: 8px; }
+  .treebtn {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-left: auto; padding: 5px 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--card);
+    font-size: 12px; color: var(--ink-2); cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .treebtn svg { width: 13px; height: 13px; flex: none; }
+  .treebtn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); background: #f5f5ff; }
+  /* 文件树必须回到正常文档流。用 absolute 盖在正文上时，两层都能滚，
+     手机上滑动会被下层的正文吃掉 —— 滚动条动了但列表纹丝不动。
+     现在展开就把正文藏起来，整个区域只有一个滚动容器。 */
   .tree {
-    width: 100%;
-    max-height: 104px;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: flex-start;
-    overflow-x: auto;
-    overflow-y: hidden;
-    border-right: none;
-    border-bottom: 1px solid var(--line-2);
-    padding: 8px 10px;
-    gap: 5px;
-    background: #fdfdfe;
-    scrollbar-width: none;
+    position: static;
+    width: 100%; flex: 1; min-height: 0;
+    display: none; flex-direction: column;
+    overflow-y: auto; overflow-x: hidden;
+    overscroll-behavior: contain;
+    background: #fff; border-right: none; border-bottom: none;
+    padding: 4px 0 48px;
+    -webkit-overflow-scrolling: touch;
   }
-  .tree::-webkit-scrollbar { display: none; }
+  .tree.open { display: flex; }
+  /* 展开文件列表时上方详情头让位，一屏能看二十来个文件而不是十来个；
+     收纳靠 view-bar 里的「文件」按钮再点一次，或选完自动收起。 */
+  .panel.headless .panel-head { display: none; }
+  .panel.headless .view { display: none; }
   .tree-item {
-    padding: 5px 11px;
-    border-radius: 7px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    flex: none;
-    font-size: 12px;
+    padding: 9px 16px; border-radius: 0;
+    background: none; border: none;
+    font-size: 13.5px; flex: none;
   }
-  .tree-item .sz { display: none; }
+  .tree-item:hover, .tree-item[data-active="1"] { background: #f3f3f7; }
+  .tree-item[data-active="1"] { box-shadow: inset 2px 0 0 var(--accent); }
+  .tree-item .sz { display: block; font-size: 10.5px; }
   .tree-item.dir {
-    padding: 5px 4px; border: none; background: none; align-self: center;
+    padding: 9px 18px; border: none; background: none;
+    font-size: 11px; color: var(--ink-4); letter-spacing: .04em;
+    text-transform: uppercase; align-self: stretch;
   }
-  .md { padding: 18px 18px 64px; font-size: 14px; }
+  .md { padding: 16px 18px 72px; font-size: 14px; line-height: 1.72; }
   .code-ln { padding: 14px 8px 44px 12px; font-size: 11.5px; }
   .code-body { padding: 14px 14px 44px 10px; font-size: 12px; }
 }

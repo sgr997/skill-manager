@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <title>Skill 管理</title>
-<link rel="stylesheet" href="/sm-static/style.css">
+<link rel="stylesheet" href="/sm-static/style.css?v=202610292356">
 </head>
 <body>
 
@@ -68,6 +68,10 @@
   <div class="panel-head">
     <div class="panel-top">
       <h2 id="p-name"></h2>
+      <button class="headtoggle" id="p-headtoggle" aria-expanded="false" aria-label="展开详情">
+        <span id="p-headtext">详情</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
       <button class="close" id="p-close" aria-label="关闭">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
@@ -87,6 +91,10 @@
 
   <div class="view-bar">
     <span class="fname" id="p-fname"></span>
+    <button class="treebtn" id="p-treebtn" aria-expanded="false" aria-controls="p-tree" aria-label="文件列表">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span id="p-treecount">文件</span>
+    </button>
     <div class="mode" id="p-mode" style="visibility:hidden">
       <button data-m="render" aria-pressed="true">渲染</button>
       <button data-m="source" aria-pressed="false">源码</button>
@@ -113,6 +121,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="/sm-static/vendor/marked.min.js"></script>
-<script src="/sm-static/app.js"></script>
+<script src="/sm-static/app.js?v=202610292356"></script>
 </body>
 </html>

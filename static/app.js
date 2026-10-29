@@ -410,6 +410,12 @@ async function openPanel(name) {
   tgl.className = "btn" + (row.disabled ? " primary" : "");
 
   $("#p-tree").innerHTML = '<div class="tree-item dir">加载中</div>';
+  closeTreeOnMobile();
+  $("#panel")?.classList.remove("expanded");
+  if ($("#p-headtoggle")) {
+    $("#p-headtoggle").setAttribute("aria-expanded", "false");
+    $("#p-headtext").textContent = "详情";
+  }
   $("#p-view").innerHTML = "";
   $("#p-fname").textContent = "";
   $("#p-mode").style.visibility = "hidden";
@@ -427,8 +433,17 @@ async function openPanel(name) {
   }
 }
 
+/* SKILL.md 顶部的 YAML frontmatter 在 markdown 里是毒药：
+   紧跟在文本后面的 --- 是 setext 标题语法，整个元数据块会被渲染成巨型 h2。
+   渲染前剥掉，源码模式仍然能看到原文。 */
+function stripFrontmatter(text) {
+  return text.replace(/^\uFEFF?---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+}
+
 function renderTree(tree) {
   const box = $("#p-tree");
+  const btn = $("#p-treecount");
+  if (btn) btn.textContent = "文件 " + tree.filter((t) => !t.dir).length;
   if (!tree.length) { box.innerHTML = '<div class="tree-item dir">空目录</div>'; return; }
   box.innerHTML = tree.map((t) => {
     if (t.dir) return `<div class="tree-item dir">${esc(t.path)}</div>`;
@@ -454,6 +469,7 @@ async function openFile(path) {
     state.file = d;
     const isMd = /\.(md|markdown)$/i.test(path);
     $("#p-fname").textContent = path + (d.truncated ? "  （已截断）" : "");
+    closeTreeOnMobile();
     $("#p-mode").style.visibility = d.binary ? "hidden" : "visible";
     $("#p-mode button[data-m=render]").disabled = !isMd;
     // markdown 默认渲染；其它文件只能看源码
@@ -478,7 +494,7 @@ function paintFile() {
 
   const isMd = /\.(md|markdown)$/i.test(d.path || "");
   if (state.mode === "render" && isMd) {
-    view.innerHTML = `<div class="md">${marked.parse(d.text)}</div>`;
+    view.innerHTML = `<div class="md">${marked.parse(stripFrontmatter(d.text))}</div>`;
   } else {
     const lines = d.text.split("\n");
     // 文件末尾换行会多出一行空行，去掉后行号才和编辑器对齐。
@@ -596,6 +612,33 @@ $("#grid").addEventListener("click", (e) => {
     return;
   }
   openPanel(card.dataset.name);
+});
+
+/* 移动端文件树开关：桌面靠常驻侧栏，手机上收进按钮，点开占满预览区（正文同时隐藏，只留一个滚动容器） */
+function closeTreeOnMobile() {
+  if (!window.matchMedia("(max-width: 820px)").matches) return;
+  $("#p-tree")?.classList.remove("open");
+  $("#p-treebtn")?.setAttribute("aria-expanded", "false");
+  $("#panel")?.classList.remove("headless");
+}
+
+/* 手机上详情头部默认收起，点「详情」展开描述、来源和更新/禁用按钮 */
+$("#p-headtoggle")?.addEventListener("click", () => {
+  const panel = $("#panel");
+  const on = panel.classList.toggle("expanded");
+  $("#p-headtoggle").setAttribute("aria-expanded", on ? "true" : "false");
+  $("#p-headtext").textContent = on ? "收起" : "详情";
+});
+
+$("#p-treebtn")?.addEventListener("click", () => {
+  const box = $("#p-tree");
+  const open = box.classList.toggle("open");
+  $("#p-treebtn").setAttribute("aria-expanded", open ? "true" : "false");
+  $("#panel")?.classList.toggle("headless", open);
+  if (open) {
+    const act = box.querySelector('.tree-item[data-active="1"]');
+    act?.scrollIntoView({ block: "center" });
+  }
 });
 
 $("#p-tree").addEventListener("click", (e) => {
