@@ -11,7 +11,6 @@ import time
 from pathlib import Path
 
 from . import config as cfg_mod
-from . import plugins
 
 HERMES = cfg_mod.path("paths", "hermes_home")
 SKILLS = HERMES / "skills"
@@ -309,76 +308,7 @@ def scan() -> list[dict]:
         })
 
     rows.sort(key=lambda r: (-r["size"], r["name"]))
-    # 插件扫描器：配置里挂了就追加，字段缺的补默认值。
-    # 每一项可以只写模块路径，也可以写成表带上参数：
-    #   scanners = ["plugins.a:A", { spec = "plugins.b:B", path = "~/x.json" }]
-    for entry in cfg_mod.CFG["paths"].get("scanners") or []:
-        if isinstance(entry, str):
-            spec, kwargs = entry, {}
-        elif isinstance(entry, dict):
-            spec = entry.get("spec") or ""
-            kwargs = {k: v for k, v in entry.items() if k != "spec"}
-        else:
-            print(f"[scan] 扫描器配置格式不对，跳过：{entry!r}")
-            continue
-        if not spec:
-            print("[scan] 扫描器配置缺 spec，跳过")
-            continue
-        try:
-            extra = plugins.build(spec, plugins.BaseScanner, **kwargs)
-        except Exception as e:
-            print(f"[scan] 跳过扫描器 {spec}：{e}")
-            continue
-        try:
-            items = extra.scan() or []
-        except Exception as e:
-            print(f"[scan] 扫描器 {spec} 出错：{e}")
-            continue
-        for it in items:
-            try:
-                rec = _normalize_extra(it)
-            except Exception as e:
-                print(f"[scan] 扫描器 {spec} 返回的记录无效：{e}")
-                continue
-            if rec["name"] in seen:
-                continue
-            seen.add(rec["name"])
-            rows.append(rec)
-
     return rows
-
-
-def _normalize_extra(it: dict) -> dict:
-    """插件返回的记录补齐字段，别让前端因为缺 key 崩掉。"""
-    name = str(it.get("name") or "").strip()
-    if not name:
-        raise ValueError("缺 name")
-    desc = str(it.get("desc") or "")
-    return {
-        "name": name,
-        "path": it.get("path") or name,
-        "abs": it.get("abs") or "",
-        "cat": it.get("cat") or "",
-        "desc": desc,
-        "descZh": "",
-        "size": int(it.get("size") or 0),
-        "files": int(it.get("files") or 0),
-        "refs": int(it.get("refs") or 0),
-        "biggest": it.get("biggest") or "",
-        "use": int(it.get("use") or 0),
-        "last": int(it.get("last") or 0),
-        "disabled": bool(it.get("disabled")),
-        "platforms": it.get("platforms") or [],
-        "link": bool(it.get("link")),
-        "realPath": it.get("realPath") or "",
-        "upstream": it.get("upstream"),
-        "integrity": it.get("integrity") or "unknown",
-        "patches": int(it.get("patches") or 0),
-        "ctxChars": int(it.get("ctxChars") or (len(name) + len(desc) + 4)),
-        "ctxTokens": float(it.get("ctxTokens") or estimate_tokens(name + " " + desc)),
-        "source": it.get("source") or "plugin",
-        "mtime": float(it.get("mtime") or 0),
-    }
 
 
 def summary(rows: list[dict]) -> dict:

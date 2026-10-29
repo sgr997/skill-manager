@@ -1,4 +1,4 @@
-"""扩展点：翻译引擎和 skill 扫描器。
+"""扩展点：翻译引擎。
 
 插件是普通 Python 文件，放 `plugins/` 下，或者任何 import 得到的位置。配置里写
 `模块路径:类名` 指过去，例如 `plugins.my_deepl:DeepLTranslator`。
@@ -33,19 +33,6 @@ class BaseTranslator:
     def translate_batch(self, texts: list[str]) -> list[str]:
         """默认逐条翻。引擎本身支持批量（DeepL、百度、腾讯云）就覆写这个。"""
         return [self.translate(t) for t in texts]
-
-
-class BaseScanner:
-    """额外的 skill 来源。
-
-    `scan()` 返回记录列表，字段按 core/scan.py 的口径：name、desc、path 必填，
-    其余（size、files、refs、cat、use、disabled）缺了框架会补默认值。
-    """
-
-    name = "base"
-
-    def scan(self) -> list[dict]:
-        raise NotImplementedError
 
 
 def load(spec: str):
@@ -90,29 +77,29 @@ def load(spec: str):
     # 没写类名就自己找：模块里唯一一个实现了基类的类
     classes = [
         c for _, c in inspect.getmembers(mod, inspect.isclass)
-        if issubclass(c, (BaseTranslator, BaseScanner)) and c not in (BaseTranslator, BaseScanner)
+        if issubclass(c, BaseTranslator) and c is not BaseTranslator
         and c.__module__ == mod.__name__
     ]
     if not classes:
-        raise AttributeError(f"{target} 里没有任何 BaseTranslator / BaseScanner 子类")
+        raise AttributeError(f"{target} 里没有任何 BaseTranslator 子类")
     if len(classes) > 1:
         names = ", ".join(c.__name__ for c in classes)
         raise AttributeError(f"{target} 里有多个候选（{names}），请在配置里写清 模块:类名")
     return classes[0]
 
 
-def build(spec: str, base, **kwargs):
+def build(spec: str, factory, **kwargs):
     """加载并实例化，顺便校验它确实是想要的那种插件。"""
     obj = load(spec)
     cls = obj if inspect.isclass(obj) else obj.__class__
-    if not issubclass(cls, base):
-        raise TypeError(f"{cls.__name__} 不是 {base.__name__} 的子类")
+    if not issubclass(cls, factory):
+        raise TypeError(f"{cls.__name__} 不是 {factory.__name__} 的子类")
     return cls(**kwargs) if inspect.isclass(obj) else obj
 
 
 def discover() -> dict[str, list[str]]:
     """列出 plugins/ 下的文件，给文档和报错用。"""
-    out: dict[str, list[str]] = {"translators": [], "scanners": []}
+    out: dict[str, list[str]] = {"files": []}
     if not PLUGIN_DIR.is_dir():
         return out
     for f in sorted(PLUGIN_DIR.glob("*.py")):

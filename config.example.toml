@@ -7,19 +7,15 @@ host = "127.0.0.1"
 port = 8900
 
 [paths]
-# skill 目录，可以配多个。同名实体按 realpath 去重。
+# skill 目录，可以配多个，同名按 realpath 去重后取第一个。
+# 注意：开关写的是 Hermes 的 skills.disabled，只对 Hermes 能加载到的 skill 生效。
+# 指向 Hermes 不认的目录时，能看能读，但开不了也关不了。
 skill_roots = ["~/.hermes/skills"]
 # 调用次数统计（Hermes 的 .usage.json）。没有就把 use 一律算 0。
 usage_file = "~/.hermes/skills/.usage.json"
 # 启用/禁用写这里。留空则开关按钮会报错，只能看不能改。
 hermes_config = "~/.hermes/config.yaml"
 hermes_home = "~/.hermes"
-# 额外扫描器，实现 core.plugins.BaseScanner
-# 两种写法：
-#   scanners = ["plugins.my_source:RemoteScanner"]
-#   scanners = [{ spec = "plugins.json_scan:JsonScanner", path = "~/extra.json" }]
-# 表形式会把 spec 以外的键当构造参数传进去
-scanners = []
 # 缓存、审计日志放这
 data_dir = "data"
 

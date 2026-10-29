@@ -101,14 +101,14 @@ core/sources.py     upstream lock files, integrity check
 core/toggle.py      writes skills.disabled, audit log
 core/update.py      per-source update dispatch
 core/translate.py   engine resolution, term protection, cache
-core/plugins.py     extension base classes and loader
-plugins/            drop your extensions here
+core/plugins.py     translator loader
+plugins/            drop your engines here
 static/             index.html, app.js, style.css, vendored marked.js
 ```
 
 ## Extending
 
-Two extension points. Write a class, point the config at it. `plugins/` ships two working examples.
+One extension point: translation engines. Write a class, point the config at it. `plugins/` ships a working example.
 
 ### Translation engines
 
@@ -135,20 +135,6 @@ engine = "plugins.deepl:DeepLTranslator"
 ```
 
 Term protection (`Mermaid` stays `Mermaid`) and cache validation live in the framework. An engine only turns text into other text. Override `translate_batch(texts) -> list[str]` if the API supports batching — the framework prefers it.
-
-### Scanners
-
-Subclass `core.plugins.BaseScanner` and implement `scan() -> list[dict]`. Each record needs `name`, should have `desc`, everything else gets a default:
-
-```toml
-[paths]
-scanners = [
-  "plugins.my_source:RemoteScanner",
-  { spec = "plugins.json_scan:JsonScanner", path = "~/extra-skills.json" },
-]
-```
-
-The table form passes every key except `spec` to the constructor.
 
 ### How plugins are resolved
 
