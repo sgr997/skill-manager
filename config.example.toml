@@ -1,0 +1,37 @@
+# skill-manager 配置示例
+# 复制成 config.toml 后按需修改。所有项都有默认值，不建这个文件也能跑。
+
+[server]
+# 只监听回环地址。要暴露到公网，先在前面加反向代理和鉴权。
+host = "127.0.0.1"
+port = 8900
+
+[paths]
+# skill 目录，可以配多个。同名实体按 realpath 去重。
+skill_roots = ["~/.hermes/skills"]
+# 调用次数统计（Hermes 的 .usage.json）。没有就把 use 一律算 0。
+usage_file = "~/.hermes/skills/.usage.json"
+# 启用/禁用写这里。留空则开关按钮会报错，只能看不能改。
+hermes_config = "~/.hermes/config.yaml"
+hermes_home = "~/.hermes"
+# 缓存、审计日志放这
+data_dir = "data"
+
+[sources]
+# 上游来源识别。两个 lock 文件都不存在时，所有 skill 都标成本地。
+hermes_hub_lock = "~/.hermes/skills/.hub/lock.json"
+skills_sh_lock = "~/.agents/.skill-lock.json"
+
+[translate]
+# 描述翻译（谷歌免费端点，不用大模型）
+enabled = true
+# 国内直连 translate.googleapis.com 不通时填代理地址，例如 "http://127.0.0.1:7890"
+proxy = ""
+workers = 6
+
+[update]
+# 关掉后页面不显示更新按钮
+enabled = true
+hermes_cmd = "hermes"
+npx_cmd = "npx"
+timeout = 240

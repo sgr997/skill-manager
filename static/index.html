@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Skill 管理</title>
+<link rel="stylesheet" href="/sm-static/style.css">
+</head>
+<body>
+
+<header>
+  <div class="head-inner">
+    <div class="title-row">
+      <h1>Skill 管理</h1>
+      <span class="count" id="count">—</span>
+      <span class="me" id="me"></span>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <div class="gen" id="gen"></div>
+
+    <div class="trbar" id="trbar" hidden>
+      <span id="trtext">还有描述是英文</span>
+      <span class="trsp"></span>
+      <button class="btn sm" id="trlang">原文</button>
+      <button class="btn sm primary" id="trgo">翻成中文</button>
+    </div>
+
+    <div class="tools">
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="搜索名字或描述" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="seg" id="seg">
+        <button data-f="all" aria-pressed="true">全部</button>
+        <button data-f="on" aria-pressed="false">启用中</button>
+        <button data-f="off" aria-pressed="false">已禁用</button>
+        <span class="sep"></span>
+        <button data-f="hub" aria-pressed="false">hub</button>
+        <button data-f="sh" aria-pressed="false">skills.sh</button>
+        <button data-f="local" aria-pressed="false">本地</button>
+        <button data-f="link" aria-pressed="false">软链</button>
+        <button data-f="core" aria-pressed="false">核心</button>
+        <span class="sep"></span>
+        <button data-f="dirty" aria-pressed="false">已改</button>
+        <button data-f="big" aria-pressed="false">大于 512 KB</button>
+      </div>
+      <button class="btn batchbtn" id="btn-batch" aria-pressed="false">多选</button>
+      <select id="sort" class="sortsel" aria-label="排序">
+        <option value="size">按体积</option>
+        <option value="use">按调用次数</option>
+        <option value="name">按名字</option>
+        <option value="mtime">按最近修改</option>
+        <option value="files">按文件数</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+
+<aside class="panel" id="panel" aria-label="skill 详情">
+  <div class="panel-head">
+    <div class="panel-top">
+      <h2 id="p-name"></h2>
+      <button class="close" id="p-close" aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="panel-desc-row">
+      <p class="panel-desc" id="p-desc"></p>
+      <button class="trbtn" id="p-tr" hidden>译</button>
+    </div>
+    <div class="panel-facts" id="p-facts"></div>
+    <div class="src" id="p-src"></div>
+    <div class="panel-actions">
+      <button class="btn primary" id="p-update">更新</button>
+      <button class="btn" id="p-toggle">禁用</button>
+    </div>
+    <div class="hint" id="p-hint" style="display:none"></div>
+  </div>
+
+  <div class="view-bar">
+    <span class="fname" id="p-fname"></span>
+    <div class="mode" id="p-mode" style="visibility:hidden">
+      <button data-m="render" aria-pressed="true">渲染</button>
+      <button data-m="source" aria-pressed="false">源码</button>
+    </div>
+  </div>
+
+  <div class="body-split">
+    <div class="tree" id="p-tree"></div>
+    <div class="view" id="p-view"></div>
+  </div>
+</aside>
+
+<div class="batchbar" id="batchbar" aria-hidden="true">
+  <span class="bsel"><b id="bcount">0</b> 已选</span>
+  <span class="bsel bsave" id="bsave"></span>
+  <button class="btn sm" id="b-all">全选</button>
+  <button class="btn sm" id="b-none">清空</button>
+  <span class="bsep"></span>
+  <button class="btn sm" id="b-on">启用</button>
+  <button class="btn sm" id="b-off">禁用</button>
+  <button class="btn sm primary" id="b-done">完成</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/sm-static/vendor/marked.min.js"></script>
+<script src="/sm-static/app.js"></script>
+</body>
+</html>
