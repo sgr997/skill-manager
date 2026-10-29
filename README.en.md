@@ -100,9 +100,65 @@ core/scan.py        directory walk, frontmatter parsing, token estimate
 core/sources.py     upstream lock files, integrity check
 core/toggle.py      writes skills.disabled, audit log
 core/update.py      per-source update dispatch
-core/translate.py   Google endpoint, term protection, cache
+core/translate.py   engine resolution, term protection, cache
+core/plugins.py     extension base classes and loader
+plugins/            drop your extensions here
 static/             index.html, app.js, style.css, vendored marked.js
 ```
+
+## Extending
+
+Two extension points. Write a class, point the config at it. `plugins/` ships two working examples.
+
+### Translation engines
+
+Subclass `core.plugins.BaseTranslator` and implement `translate(text) -> str`:
+
+```python
+from core.plugins import BaseTranslator
+
+class DeepLTranslator(BaseTranslator):
+    name = "deepl"
+
+    def __init__(self, proxy: str = "", **kwargs):
+        self.proxy = proxy          # the framework passes translate.proxy
+
+    def translate(self, text: str) -> str:
+        ...                          # return the translated text
+```
+
+Save as `plugins/deepl.py`, then:
+
+```toml
+[translate]
+engine = "plugins.deepl:DeepLTranslator"
+```
+
+Term protection (`Mermaid` stays `Mermaid`) and cache validation live in the framework. An engine only turns text into other text. Override `translate_batch(texts) -> list[str]` if the API supports batching — the framework prefers it.
+
+### Scanners
+
+Subclass `core.plugins.BaseScanner` and implement `scan() -> list[dict]`. Each record needs `name`, should have `desc`, everything else gets a default:
+
+```toml
+[paths]
+scanners = [
+  "plugins.my_source:RemoteScanner",
+  { spec = "plugins.json_scan:JsonScanner", path = "~/extra-skills.json" },
+]
+```
+
+The table form passes every key except `spec` to the constructor.
+
+### How plugins are resolved
+
+```
+plugins.deepl:DeepLTranslator      plain import
+plugins.deepl                      picks the only subclass in the module
+/abs/path/foo.py:MyScanner         loads a file directly, no packaging
+```
+
+Duplicate names resolve by order: `skill_roots` first, then `scanners`. Put your directory ahead of others to override.
 
 ## Known limitations
 

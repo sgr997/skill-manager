@@ -6,3 +6,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# 自己写的插件可能带 token，需要单独提交时用 git add -f
+plugins/_local*.py

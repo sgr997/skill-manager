@@ -14,6 +14,12 @@ usage_file = "~/.hermes/skills/.usage.json"
 # 启用/禁用写这里。留空则开关按钮会报错，只能看不能改。
 hermes_config = "~/.hermes/config.yaml"
 hermes_home = "~/.hermes"
+# 额外扫描器，实现 core.plugins.BaseScanner
+# 两种写法：
+#   scanners = ["plugins.my_source:RemoteScanner"]
+#   scanners = [{ spec = "plugins.json_scan:JsonScanner", path = "~/extra.json" }]
+# 表形式会把 spec 以外的键当构造参数传进去
+scanners = []
 # 缓存、审计日志放这
 data_dir = "data"
 
@@ -25,6 +31,8 @@ skills_sh_lock = "~/.agents/.skill-lock.json"
 [translate]
 # 描述翻译（谷歌免费端点，不用大模型）
 enabled = true
+# 翻译引擎：google（内置）| none（不翻）| plugins.文件名:类名（自己实现）
+engine = "google"
 # 国内直连 translate.googleapis.com 不通时填代理地址，例如 "http://127.0.0.1:7890"
 proxy = ""
 workers = 6

@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import config as cfg_mod
+from . import plugins
 
 GOOGLE_URL = cfg_mod.CFG["translate"].get("endpoint") or "https://translate.googleapis.com/translate_a/single"
 PROXY = os.environ.get("SKILLMGR_PROXY", cfg_mod.CFG["translate"].get("proxy") or "")
@@ -116,29 +117,85 @@ def _opener() -> urllib.request.OpenerDirector:
     return urllib.request.build_opener(handler)
 
 
-def _one(text: str, attempts: int = 3, timeout: int = 20) -> str:
-    """翻一条。谷歌返回嵌套数组，把各段拼起来。"""
-    safe, marks = _protect(text)
-    q = urllib.parse.urlencode(
-        {"client": "gtx", "sl": "en", "tl": "zh-CN", "dt": "t", "q": safe}
-    )
-    url = f"{GOOGLE_URL}?{q}"
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    opener = _opener()
+class GoogleTranslator(plugins.BaseTranslator):
+    """谷歌免费端点。不要 key，国内直连不通时要配代理。"""
 
-    for i in range(attempts):
+    name = "google"
+
+    def __init__(self, endpoint: str | None = None, proxy: str | None = None,
+                 attempts: int = 3, timeout: int = 20):
+        self.endpoint = endpoint or GOOGLE_URL
+        self.proxy = PROXY if proxy is None else proxy
+        self.attempts = attempts
+        self.timeout = timeout
+        self._opener = None
+
+    def _http(self) -> urllib.request.OpenerDirector:
+        if self._opener is None:
+            handler = (urllib.request.ProxyHandler({"http": self.proxy, "https": self.proxy})
+                       if self.proxy else urllib.request.ProxyHandler({}))
+            self._opener = urllib.request.build_opener(handler)
+        return self._opener
+
+    def translate(self, text: str) -> str:
+        """翻一条。谷歌返回嵌套数组，把各段拼起来。"""
+        q = urllib.parse.urlencode(
+            {"client": "gtx", "sl": "en", "tl": "zh-CN", "dt": "t", "q": text}
+        )
+        req = urllib.request.Request(f"{self.endpoint}?{q}", headers={"User-Agent": UA})
+        opener = self._http()
+
+        for i in range(self.attempts):
+            try:
+                with opener.open(req, timeout=self.timeout) as r:
+                    data = json.loads(r.read())
+                parts = [seg[0] for seg in (data[0] or []) if seg and seg[0]]
+                return "".join(parts)
+            except Exception as e:
+                if i == self.attempts - 1:
+                    raise RuntimeError(f"翻译失败：{e}") from e
+                time.sleep(2 * (i + 1))
+        return ""
+
+
+class NullTranslator(plugins.BaseTranslator):
+    """不翻译，原样返回。关掉翻译功能时用它。"""
+
+    name = "none"
+
+    def translate(self, text: str) -> str:
+        return text
+
+
+_BUILTIN = {"google": GoogleTranslator, "none": NullTranslator}
+_engine = None
+
+
+def engine() -> plugins.BaseTranslator:
+    """当前引擎，按配置实例化一次后复用。"""
+    global _engine
+    if _engine is not None:
+        return _engine
+
+    spec = (cfg_mod.CFG["translate"].get("engine") or "google").strip()
+    tcfg = cfg_mod.CFG["translate"]
+    if spec in _BUILTIN:
+        _engine = _BUILTIN[spec](proxy=tcfg.get("proxy") or "",
+                                 endpoint=tcfg.get("endpoint")) if spec == "google" \
+            else _BUILTIN[spec]()
+    else:
+        # 插件引擎把代理地址传进去（它不一定要用，收着不碍事）
         try:
-            with opener.open(req, timeout=timeout) as r:
-                data = json.loads(r.read())
-            parts = [seg[0] for seg in (data[0] or []) if seg and seg[0]]
-            text = _restore("".join(parts), marks)
-            # 折叠块原文带硬换行，卡片上会断得很难看，压成单行
-            return re.sub(r"\s+", " ", text).strip()
-        except Exception as e:
-            if i == attempts - 1:
-                raise RuntimeError(f"翻译失败：{e}") from e
-            time.sleep(2 * (i + 1))
-    return ""
+            _engine = plugins.build(spec, plugins.BaseTranslator)
+        except TypeError:
+            _engine = plugins.build(spec, plugins.BaseTranslator, proxy=tcfg.get("proxy") or "")
+    return _engine
+
+
+def reset_engine() -> None:
+    """改完配置调一下，下次取引擎时重新实例化。"""
+    global _engine
+    _engine = None
 
 
 def translate(names_descs: list[tuple[str, str]], force: bool = False) -> dict:
@@ -160,12 +217,18 @@ def translate(names_descs: list[tuple[str, str]], force: bool = False) -> dict:
     if not todo:
         return out
 
+    tr = engine()
+
     def work(item):
         name, desc = item
+        # 术语保护放在框架层：换任何引擎都自动受保护，插件不用重复实现
+        safe, marks = _protect(desc)
         try:
-            return name, desc, _one(desc)
+            out = tr.translate(safe)
         except Exception:
             return name, desc, ""
+        # 折叠块原文带硬换行，卡片上会断得很难看，压成单行
+        return name, desc, re.sub(r"\s+", " ", _restore(out or "", marks)).strip()
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         results = list(pool.map(work, todo))

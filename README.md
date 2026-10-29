@@ -100,9 +100,80 @@ core/scan.py        目录遍历、frontmatter 解析、token 估算
 core/sources.py     上游 lock 文件、完整性比对
 core/toggle.py      写 skills.disabled、审计日志
 core/update.py      按来源分派更新
-core/translate.py   谷歌端点、术语保护、缓存
+core/translate.py   引擎发现、术语保护、缓存
+core/plugins.py     扩展点基类与加载器
+plugins/            扩展插件放这里
 static/             index.html、app.js、style.css、本地化的 marked.js
 ```
+
+## 扩展
+
+两个扩展点，都是「写个类，配置里挂上」，不用改核心代码。`plugins/` 下有两个能跑的示例。
+
+### 翻译引擎
+
+继承 `core.plugins.BaseTranslator`，实现 `translate(text) -> str`：
+
+```python
+from core.plugins import BaseTranslator
+
+class DeepLTranslator(BaseTranslator):
+    name = "deepl"
+
+    def __init__(self, proxy: str = "", **kwargs):
+        self.proxy = proxy          # 框架会把 translate.proxy 传进来
+
+    def translate(self, text: str) -> str:
+        ...                          # 返回一段译文
+```
+
+放成 `plugins/deepl.py`，然后在配置里指过去：
+
+```toml
+[translate]
+engine = "plugins.deepl:DeepLTranslator"
+```
+
+术语保护（`Mermaid` 不会被翻成美人鱼）和缓存校验由框架处理，引擎只管把文本变成另一种语言。引擎本身有批量接口就覆写 `translate_batch(texts) -> list[str]`，框架会优先调用。
+
+### 扫描器
+
+继承 `core.plugins.BaseScanner`，实现 `scan() -> list[dict]`。返回的记录里 `name` 必填，`desc` 强烈建议填，其余字段缺了框架补默认值：
+
+```toml
+[paths]
+scanners = [
+  "plugins.my_source:RemoteScanner",
+  { spec = "plugins.json_scan:JsonScanner", path = "~/extra-skills.json" },
+]
+```
+
+表形式的写法会把 `spec` 以外的键当构造参数传进去。
+
+```python
+from core.plugins import BaseScanner
+
+class RemoteScanner(BaseScanner):
+    name = "remote"
+
+    def __init__(self, url: str, token: str = ""):
+        self.url, self.token = url, token
+
+    def scan(self) -> list[dict]:
+        return [{"name": "...", "desc": "...", "path": "remote/...", "cat": "remote"}]
+```
+
+### 插件怎么被找到
+
+三种写法都行：
+
+```
+plugins.deepl:DeepLTranslator       import 得到
+plugins.deepl                       模块里只有一个子类时自动选
+/abs/path/foo.py:MyScanner          直接从文件加载，不用装包
+```
+
+同名 skill 按 `skill_roots` 和 `scanners` 的先后取第一个，后面的跳过。所以想让自己的目录盖过别处，把它排在前面。
 
 ## 已知限制
 
