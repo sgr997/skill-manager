@@ -58,9 +58,10 @@ def update(name: str, path: Path, force: bool = False) -> dict:
                 "message": "本地有修改，跳过。要覆盖请走命令行加 --force"}
 
     if up["kind"] == "hermes-hub":
-        ok, out = _run(["hermes", "skills", "update", name] + (["--force"] if force else []))
+        ok, out = _run([cfg_mod.resolve_cmd(cfg_mod.CFG["update"].get("hermes_cmd") or "hermes"), "skills", "update", name] + (["--force"] if force else []))
     else:
-        ok, out = _run(["npx", "-y", "skills@latest", "update", name], timeout=300)
+        ok, out = _run([cfg_mod.resolve_cmd(cfg_mod.CFG["update"].get("npx_cmd") or "npx"),
+              "-y", "skills@latest", "update", name], timeout=300)
 
     if ok:
         sources.rebaseline(name, path)

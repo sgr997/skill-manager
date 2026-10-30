@@ -682,6 +682,36 @@ main { max-width: 1240px; margin: 0 auto; padding: 20px 24px 120px; }
 .md input[type="checkbox"] { margin-right: .4em; }
 
 /* 二进制 / 空态 */
+/* 加载态 */
+.sk-item { padding: 9px 16px; }
+.sk-bar {
+  display: block; height: 12px; border-radius: 5px;
+  background: linear-gradient(90deg, #f1f1f5 25%, #e5e5eb 50%, #f1f1f5 75%);
+  background-size: 300% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+/* 撑满正文区再居中，否则提示贴在顶部、下面留一大片白 */
+.view { display: flex; flex-direction: column; }
+.loading-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 13px; padding: 24px; flex: 1; min-height: 0;
+  color: var(--ink-3); font-size: 12.5px;
+}
+.spin {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--line); border-top-color: var(--accent);
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 加载时工具栏还没意义：按钮占位隐藏（避免「文件 N」孤零零飘着，也不让布局跳动），
+   工具栏自己的下边框一起抹掉，否则空着一条横线像是等着内容却没来 */
+.panel.loading .treebtn,
+.panel.loading .mode { visibility: hidden; }
+.panel.loading .view-bar { border-bottom-color: transparent; }
+
 .binary { text-align: center; padding: 80px 24px; color: var(--ink-3); font-size: 13px; line-height: 1.75; }
 .binary .big {
   display: block; font-size: 12px; font-weight: 650;

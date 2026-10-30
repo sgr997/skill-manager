@@ -38,7 +38,9 @@ def disabled() -> list[str]:
 
 def _write(names: list[str]) -> tuple[bool, str]:
     payload = json.dumps(sorted(set(names)), ensure_ascii=False)
-    cmd = ["hermes", "config", "set", "skills.disabled", payload, "--force"]
+    # 用绝对路径：服务由 launchd 拉起时 PATH 里没有 ~/.local/bin
+    cmd = [cfg_mod.resolve_cmd(cfg_mod.CFG["update"].get("hermes_cmd") or "hermes"),
+           "config", "set", "skills.disabled", payload, "--force"]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     except (OSError, subprocess.SubprocessError) as e:

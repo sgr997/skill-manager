@@ -122,6 +122,32 @@ def _load() -> dict:
 CFG = _load()
 
 
+def resolve_cmd(name: str) -> str:
+    """把命令名解析成可执行文件的绝对路径。
+
+    launchd 启动的服务 PATH 只有 /usr/bin:/bin:/usr/sbin:/sbin，装在 ~/.local/bin
+    或 /opt/homebrew/bin 的 hermes、npx 一律找不到，subprocess 直接报
+    FileNotFoundError。依次试：绝对路径 → PATH → 常见安装位置。
+    """
+    import os
+    import shutil
+
+    name = os.path.expanduser(str(name or ""))
+    if not name:
+        return name
+    if os.path.isabs(name):
+        return name if os.access(name, os.X_OK) else name
+    found = shutil.which(name)
+    if found:
+        return found
+    for base in ("~/.local/bin", "/opt/homebrew/bin", "/usr/local/bin",
+                 "~/.hermes/hermes-agent/venv/bin"):
+        p = Path(base).expanduser() / name
+        if p.is_file() and os.access(p, os.X_OK):
+            return str(p)
+    return name
+
+
 def path(*keys: str) -> Path:
     """取配置里的路径项，相对路径按项目根解析。"""
     cur = CFG

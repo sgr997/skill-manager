@@ -409,14 +409,15 @@ async function openPanel(name) {
   tgl.textContent = row.disabled ? "启用" : "禁用";
   tgl.className = "btn" + (row.disabled ? " primary" : "");
 
-  $("#p-tree").innerHTML = '<div class="tree-item dir">加载中</div>';
+  $("#panel")?.classList.add("loading");
+  $("#p-tree").innerHTML = skRows(9);
   closeTreeOnMobile();
   $("#panel")?.classList.remove("expanded");
   if ($("#p-headtoggle")) {
     $("#p-headtoggle").setAttribute("aria-expanded", "false");
     $("#p-headtext").textContent = "详情";
   }
-  $("#p-view").innerHTML = "";
+  $("#p-view").innerHTML = viewLoading("加载中…");
   $("#p-fname").textContent = "";
   $("#p-mode").style.visibility = "hidden";
   $("#panel").classList.add("on");
@@ -424,11 +425,13 @@ async function openPanel(name) {
 
   try {
     const d = await api(`/api/skills/${encodeURIComponent(name)}`);
+    $("#panel")?.classList.remove("loading");
     state.tree = d.tree || [];
     renderTree(state.tree);
     const first = state.tree.find((t) => t.path === "SKILL.md") || state.tree.find((t) => !t.dir);
     if (first) openFile(first.path);
   } catch (e) {
+    $("#panel")?.classList.remove("loading");
     $("#p-tree").innerHTML = `<div class="tree-item">${esc(e.message)}</div>`;
   }
 }
@@ -438,6 +441,19 @@ async function openPanel(name) {
    渲染前剥掉，源码模式仍然能看到原文。 */
 function stripFrontmatter(text) {
   return text.replace(/^\uFEFF?---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+}
+
+/* 加载态：文件树用骨架条，正文用居中转圈。
+   只写「加载中」三个字的时候，工具栏的「文件 79」已经先出来了，孤零零飘在那里很难看。 */
+function skRows(n = 8) {
+  return Array.from({ length: n }, (_, i) => {
+    const w = 42 + ((i * 17) % 38);
+    return `<div class="sk-item"><span class="sk-bar" style="width:${w}%"></span></div>`;
+  }).join("");
+}
+
+function viewLoading(text = "读取中") {
+  return `<div class="loading-state"><span class="spin"></span><p>${text}</p></div>`;
 }
 
 function renderTree(tree) {
@@ -462,7 +478,7 @@ async function openFile(path) {
   const active = $(`.tree-item[data-file="${CSS.escape(path)}"]`);
   if (active) active.dataset.active = "1";
 
-  $("#p-view").innerHTML = '<div class="binary">读取中</div>';
+  $("#p-view").innerHTML = viewLoading();
   try {
     const d = await api(`/api/skills/${encodeURIComponent(name)}/file?path=${encodeURIComponent(path)}`);
     d.path = path;
