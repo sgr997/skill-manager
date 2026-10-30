@@ -307,6 +307,10 @@ async function batchToggle(enabled) {
     const verb = enabled ? "启用" : "禁用";
     if (!confirm(`确定${verb}这 ${names.length} 个 skill？${enabled ? "" : "下一轮对话生效。"}`)) return;
   }
+  const btn = enabled ? $("#b-on") : $("#b-off");
+  const btnOld = btn ? btn.textContent : "";
+  const startedAt = Date.now();
+  if (btn) { btn.disabled = true; btn.textContent = "处理中…"; }
   try {
     const d = await api("/api/skills/batch-toggle", {
       method: "POST", body: JSON.stringify({ names, enabled }),
@@ -329,6 +333,9 @@ async function batchToggle(enabled) {
     render();
   } catch (e) {
     toast(e.message, "bad");
+  } finally {
+    await keepBusy(startedAt);
+    if (btn) { btn.disabled = false; btn.textContent = btnOld; }
   }
 }
 
@@ -536,7 +543,25 @@ function closePanel() {
 
 /* ── 动作 ─────────────────────────────── */
 
+/** 本地接口通常几十毫秒就返回，转圈一闪而过用户等于没看到。
+    这里保证加载态至少显示 380ms，让人确认自己点到了。 */
+const MIN_BUSY_MS = 380;
+function keepBusy(startedAt) {
+  const rest = MIN_BUSY_MS - (Date.now() - startedAt);
+  return rest > 0 ? new Promise((r) => setTimeout(r, rest)) : Promise.resolve();
+}
+
 async function doToggle(name, enabled) {
+  // 卡片上的开关先转起来，抽屉里的按钮同时置灰，两边共用一次请求
+  const sw = document.querySelector(`.sw[data-toggle="${CSS.escape(name)}"]`);
+  const tgl = state.current?.name === name ? $("#p-toggle") : null;
+  const tglOld = tgl ? tgl.textContent : "";
+  const startedAt = Date.now();
+  sw?.classList.add("busy");
+  if (tgl) {
+    tgl.disabled = true;
+    tgl.textContent = "处理中…";
+  }
   try {
     const d = await api(`/api/skills/${encodeURIComponent(name)}/toggle`, {
       method: "POST", body: JSON.stringify({ enabled }),
@@ -561,6 +586,14 @@ async function doToggle(name, enabled) {
     toast(enabled ? `已启用 ${name}` : `已禁用 ${name}，下一轮对话生效`, "good");
   } catch (e) {
     toast(e.message, "bad");
+  } finally {
+    await keepBusy(startedAt);
+    sw?.classList.remove("busy");
+    if (tgl) {
+      tgl.disabled = false;
+      // 成功路径已经把文案改成新的，只有中途失败才需要还原
+      if (tgl.textContent === "处理中…") tgl.textContent = tglOld;
+    }
   }
 }
 
