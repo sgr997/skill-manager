@@ -419,17 +419,17 @@ async function openPanel(name) {
   }
   $("#p-view").innerHTML = viewLoading("加载中…");
   $("#p-fname").textContent = "";
-  $("#p-mode").style.visibility = "hidden";
   $("#panel").classList.add("on");
   $("#scrim").classList.add("on");
 
   try {
     const d = await api(`/api/skills/${encodeURIComponent(name)}`);
-    $("#panel")?.classList.remove("loading");
     state.tree = d.tree || [];
     renderTree(state.tree);
     const first = state.tree.find((t) => t.path === "SKILL.md") || state.tree.find((t) => !t.dir);
-    if (first) openFile(first.path);
+    // 工具条等文件渲染完再出现，否则会变成「文件按钮先出来、渲染/源码后出来」
+    if (first) await openFile(first.path);
+    else $("#panel")?.classList.remove("loading");
   } catch (e) {
     $("#panel")?.classList.remove("loading");
     $("#p-tree").innerHTML = `<div class="tree-item">${esc(e.message)}</div>`;
@@ -486,7 +486,7 @@ async function openFile(path) {
     const isMd = /\.(md|markdown)$/i.test(path);
     $("#p-fname").textContent = path + (d.truncated ? "  （已截断）" : "");
     closeTreeOnMobile();
-    $("#p-mode").style.visibility = d.binary ? "hidden" : "visible";
+    $("#p-mode").classList.toggle("disabled", !!d.binary);
     $("#p-mode button[data-m=render]").disabled = !isMd;
     // markdown 默认渲染；其它文件只能看源码
     state.mode = isMd ? (state.mode === "source" ? "source" : "render") : "source";
@@ -494,6 +494,8 @@ async function openFile(path) {
     paintFile();
   } catch (e) {
     $("#p-view").innerHTML = `<div class="binary">${esc(e.message)}</div>`;
+  } finally {
+    $("#panel")?.classList.remove("loading");
   }
 }
 
